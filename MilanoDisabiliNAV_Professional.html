@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1228">
+<title>MilanoDisabiliNAV — ملاحة ذوي الإعاقة</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#0b1228;--navy2:#141d3a;--mint:#dff8ee;--green:#18a873;--red:#d9485f;--bg:#f4f6fa;--card:#fff;--text:#182033;--muted:#697386;--line:#e5e9f0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:linear-gradient(135deg,var(--navy),#1b2850);color:#fff;padding:18px 18px 22px;position:sticky;top:0;z-index:1000;box-shadow:0 4px 18px #0002}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:46px;height:46px;border-radius:14px;background:#fff1;display:grid;place-items:center;font-size:25px}
+h1{font-size:20px;margin:0}.sub{font-size:12px;color:#cbd4ea;margin-top:3px}
+main{max-width:720px;margin:auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:14px;box-shadow:0 5px 20px #1820330b}
+.status{display:flex;gap:10px;align-items:flex-start;background:var(--mint);border-radius:16px;padding:13px}.dot{width:10px;height:10px;background:var(--green);border-radius:50%;margin-top:6px;flex:none}
+.status strong{display:block;font-size:14px}.status span{font-size:12px;color:#356457}
+label{font-size:13px;font-weight:700;display:block;margin-bottom:8px}
+.inputrow{display:flex;gap:8px}.inputrow input{min-width:0;flex:1}
+input{width:100%;height:52px;border:1px solid #d8deea;border-radius:15px;padding:0 15px;font-size:16px;outline:none;background:#fff}
+input:focus{border-color:#6d7fae;box-shadow:0 0 0 3px #6d7fae18}
+button{border:0;border-radius:15px;min-height:50px;padding:0 16px;font-size:15px;font-weight:800;cursor:pointer}
+.primary{background:var(--navy);color:#fff}.secondary{background:#e9edf5;color:var(--navy)}.green{background:var(--green);color:#fff}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+#map{height:390px;border-radius:19px;overflow:hidden}
+.mapwrap{padding:8px}.mapwrap .card{padding:8px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.section-title h2{font-size:16px;margin:0}
+.badge{font-size:11px;background:#fff0f2;color:var(--red);padding:6px 9px;border-radius:20px;font-weight:800}
+.restrictions{display:grid;gap:8px}.restriction{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+.restriction b{font-size:13px}.restriction small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.summary{display:none;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.metric{background:#f7f8fb;border-radius:14px;padding:10px;text-align:center}.metric b{display:block;font-size:17px}.metric span{font-size:11px;color:var(--muted)}
+.note{font-size:11px;line-height:1.7;color:var(--muted);margin:10px 2px 0}
+#message{display:none;margin-top:10px;border-radius:13px;padding:10px;font-size:12px}
+.ok{background:#e9f8f1;color:#126846}.err{background:#fff0f2;color:#9e263b}.info{background:#eef3ff;color:#29467f}
+footer{text-align:center;color:#8a93a5;font-size:10px;padding:8px 0 24px}
+@media(max-width:420px){#map{height:350px}.actions{grid-template-columns:1fr}.inputrow{display:block}.inputrow button{width:100%;margin-top:8px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">♿</div>
+    <div><h1>MilanoDisabiliNAV</h1><div class="sub">ملاحة مخصصة لحاملي تصريح ذوي الإعاقة</div></div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="status"><div class="dot"></div><div><strong id="statusTitle">جاهز للملاحة</strong><span id="statusText">حدد موقعك ثم اكتب وجهتك.</span></div></div>
+  </div>
+
+  <div class="card">
+    <label for="destination">📍 إلى أين تريد الذهاب؟</label>
+    <div class="inputrow">
+      <input id="destination" value="Duomo, Milano" placeholder="مثال: Duomo, Milano">
+      <button class="secondary" id="locateBtn">موقعي</button>
+    </div>
+    <div class="actions">
+      <button class="primary" id="routeBtn">🧭 احسب الطريق</button>
+      <button class="secondary" id="clearBtn">مسح الطريق</button>
+    </div>
+    <div id="message"></div>
+    <div class="summary" id="summary">
+      <div class="metric"><b id="distance">—</b><span>المسافة</span></div>
+      <div class="metric"><b id="duration">—</b><span>الوقت التقريبي</span></div>
+      <div class="metric"><b>♿</b><span>وضع التصريح</span></div>
+    </div>
+  </div>
+
+  <div class="card mapwrap"><div id="map"></div></div>
+
+  <div class="card">
+    <div class="section-title"><h2>🚧 قيود يجب الانتباه إليها</h2><span class="badge">Milano</span></div>
+    <div class="restrictions">
+      <div class="restriction"><b>Via Teuliè</b><small>القيد خاص باتجاه periferia في المسار المحجوز للترام — ليس الشارع كله.</small></div>
+      <div class="restriction"><b>Via Broletto</b><small>باتجاه Piazza Cordusio.</small></div>
+      <div class="restriction"><b>Piazza Lega Lombarda</b><small>باتجاه Via Bramante.</small></div>
+      <div class="restriction"><b>Via Ripamonti</b><small>المقطع بين Viale Isonzo و Via Soave.</small></div>
+      <div class="restriction"><b>Piazzale Arduino</b><small>منطقة ذات قيد على المركبات المصرح لها حسب اللوحات.</small></div>
+      <div class="restriction"><b>Via Sammartini</b><small>انتبه للجزء المخصص حسب الإشارات.</small></div>
+      <div class="restriction"><b>Piazza Luigi di Savoia</b><small>المسار المحجوز حصريًا للترام والشرطة والطوارئ حسب اللوحات.</small></div>
+    </div>
+    <p class="note">⚠️ هذا التطبيق مساعد للملاحة. اتبع دائمًا الإشارات المرورية في المكان. القيود هنا مبنية على المعلومات الرسمية المتاحة، ولا ينبغي اعتبار التطبيق بديلاً عن اللوحات المرورية.</p>
+  </div>
+  <footer>MilanoDisabiliNAV • إصدار احترافي تجريبي</footer>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map',{zoomControl:true}).setView([45.4642,9.19],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+let userMarker=null,destMarker=null,routeLine=null,userPos=null;
+
+const $=id=>document.getElementById(id);
+function msg(text,type='info'){const el=$('message');el.textContent=text;el.className=type;el.style.display='block'}
+function status(title,text){$('statusTitle').textContent=title;$('statusText').textContent=text}
+function markerIcon(emoji){return L.divIcon({className:'',html:`<div style="background:#0b1228;color:white;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:3px solid white;box-shadow:0 3px 12px #0004;font-size:18px">${emoji}</div>`,iconSize:[36,36],iconAnchor:[18,18]})}
+
+function setLocation(lat,lon){
+  userPos={lat,lon};
+  if(userMarker) userMarker.setLatLng([lat,lon]); else userMarker=L.marker([lat,lon],{icon:markerIcon('📍')}).addTo(map).bindPopup('موقعك الحالي');
+  map.setView([lat,lon],14); status('تم تحديد موقعك','يمكنك الآن اختيار الوجهة وحساب الطريق.'); msg('تم تحديد موقعك بنجاح.','ok');
+}
+
+$('locateBtn').onclick=()=>{
+  if(!navigator.geolocation){msg('المتصفح لا يدعم تحديد الموقع.','err');return}
+  msg('جاري تحديد موقعك…','info'); status('تحديد الموقع','اسمح للمتصفح بالوصول إلى موقعك.');
+  navigator.geolocation.getCurrentPosition(p=>setLocation(p.coords.latitude,p.coords.longitude),
+    ()=>{msg('لم يتم الحصول على الموقع. تأكد من السماح بالموقع في Chrome.','err');status('تعذر تحديد الموقع','اضغط «موقعي» وحاول مرة أخرى.')},
+    {enableHighAccuracy:true,timeout:12000,maximumAge:30000});
+};
+
+async function geocode(q){
+  const url='https://photon.komoot.io/api/?limit=1&q='+encodeURIComponent(q);
+  const r=await fetch(url); if(!r.ok) throw new Error('geocode'); const j=await r.json();
+  if(!j.features?.length) throw new Error('notfound');
+  const c=j.features[0].geometry.coordinates;
+  return {lat:c[1],lon:c[0],name:j.features[0].properties?.name||q};
+}
+
+$('routeBtn').onclick=async()=>{
+  try{
+    if(!userPos){msg('اضغط أولًا «موقعي» لتحديد نقطة الانطلاق.','err');return}
+    const q=$('destination').value.trim(); if(!q){msg('اكتب وجهتك أولًا.','err');return}
+    msg('جاري البحث عن الوجهة وحساب أفضل مسار…','info');status('حساب المسار','يرجى الانتظار لحظات.');
+    const d=await geocode(q+', Milano, Italy');
+    if(destMarker) destMarker.setLatLng([d.lat,d.lon]); else destMarker=L.marker([d.lat,d.lon],{icon:markerIcon('🏁')}).addTo(map).bindPopup('الوجهة');
+    const url=`https://router.project-osrm.org/route/v1/driving/${userPos.lon},${userPos.lat};${d.lon},${d.lat}?overview=full&geometries=geojson&steps=true`;
+    const r=await fetch(url); if(!r.ok) throw new Error('route'); const j=await r.json();
+    if(j.code!=='Ok'||!j.routes?.length) throw new Error('noroute');
+    const rt=j.routes[0];
+    if(routeLine) routeLine.remove();
+    routeLine=L.geoJSON(rt.geometry,{style:{weight:6,opacity:.9}}).addTo(map);
+    map.fitBounds(routeLine.getBounds(),{padding:[25,25]});
+    $('distance').textContent=(rt.distance/1000).toFixed(1)+' km';
+    const mins=Math.round(rt.duration/60); $('duration').textContent=mins<60?mins+' د':Math.floor(mins/60)+'س '+(mins%60)+'د';
+    $('summary').style.display='grid';
+    msg('تم حساب المسار. انتبه إلى اللوحات المرورية والقيود الموضحة أدناه.','ok');
+    status('المسار جاهز','تم رسم الطريق بين موقعك والوجهة.');
+  }catch(e){msg(e.message==='notfound'?'لم أجد هذه الوجهة. جرّب اسمًا أو عنوانًا أوضح.':'تعذر حساب المسار الآن. تحقق من اتصال الإنترنت وحاول مرة أخرى.','err');status('تعذر حساب المسار','حاول مرة أخرى.')}
+};
+
+$('clearBtn').onclick=()=>{
+  if(routeLine){routeLine.remove();routeLine=null}
+  if(destMarker){destMarker.remove();destMarker=null}
+  $('summary').style.display='none'; $('message').style.display='none';
+  status('جاهز للملاحة','حدد موقعك ثم اكتب وجهتك.');
+};
+</script>
+</body>
+</html>
