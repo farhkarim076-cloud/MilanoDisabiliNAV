@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1228">
+<title>MilanoDisabiliNAV — ملاحة ذوي الإعاقة</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#0b1228;--navy2:#141d3a;--mint:#dff8ee;--green:#18a873;--red:#d9485f;--bg:#f4f6fa;--card:#fff;--text:#182033;--muted:#697386;--line:#e5e9f0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:linear-gradient(135deg,var(--navy),#1b2850);color:#fff;padding:18px 18px 22px;position:sticky;top:0;z-index:1000;box-shadow:0 4px 18px #0002}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:46px;height:46px;border-radius:14px;background:#fff1;display:grid;place-items:center;font-size:25px}
+h1{font-size:20px;margin:0}.sub{font-size:12px;color:#cbd4ea;margin-top:3px}
+main{max-width:720px;margin:auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:14px;box-shadow:0 5px 20px #1820330b}
+.status{display:flex;gap:10px;align-items:flex-start;background:var(--mint);border-radius:16px;padding:13px}.dot{width:10px;height:10px;background:var(--green);border-radius:50%;margin-top:6px;flex:none}
+.status strong{display:block;font-size:14px}.status span{font-size:12px;color:#356457}
+label{font-size:13px;font-weight:700;display:block;margin-bottom:8px}
+.inputrow{display:flex;gap:8px}.inputrow input{min-width:0;flex:1}
+input{width:100%;height:52px;border:1px solid #d8deea;border-radius:15px;padding:0 15px;font-size:16px;outline:none;background:#fff}
+input:focus{border-color:#6d7fae;box-shadow:0 0 0 3px #6d7fae18}
+button{border:0;border-radius:15px;min-height:50px;padding:0 16px;font-size:15px;font-weight:800;cursor:pointer}
+.primary{background:var(--navy);color:#fff}.secondary{background:#e9edf5;color:var(--navy)}.green{background:var(--green);color:#fff}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+#map{height:390px;border-radius:19px;overflow:hidden}
+.mapwrap{padding:8px}.mapwrap .card{padding:8px}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.section-title h2{font-size:16px;margin:0}
+.badge{font-size:11px;background:#fff0f2;color:var(--red);padding:6px 9px;border-radius:20px;font-weight:800}
+.restrictions{display:grid;gap:8px}.restriction{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+.restriction b{font-size:13px}.restriction small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.summary{display:none;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.metric{background:#f7f8fb;border-radius:14px;padding:10px;text-align:center}.metric b{display:block;font-size:17px}.metric span{font-size:11px;color:var(--muted)}
+.note{font-size:11px;line-height:1.7;color:var(--muted);margin:10px 2px 0}
+.navinfo{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#eef3ff;border-radius:15px;padding:12px;margin-top:10px}
+.navinfo b{display:block;font-size:14px}.navinfo span{font-size:11px;color:var(--muted)}
+.navinfo button{min-height:42px;white-space:nowrap}
+
+#message{display:none;margin-top:10px;border-radius:13px;padding:10px;font-size:12px}
+.ok{background:#e9f8f1;color:#126846}.err{background:#fff0f2;color:#9e263b}.info{background:#eef3ff;color:#29467f}
+footer{text-align:center;color:#8a93a5;font-size:10px;padding:8px 0 24px}
+@media(max-width:420px){#map{height:350px}.actions{grid-template-columns:1fr}.inputrow{display:block}.inputrow button{width:100%;margin-top:8px}}
+
+.drive-top{display:none;position:sticky;top:0;z-index:1100;background:#0b1228;color:#fff;padding:10px 14px;justify-content:space-between;align-items:center;box-shadow:0 3px 14px #0003}
+.drive-top b{font-size:21px;display:block}.drive-top span{font-size:11px;color:#cbd4ea}
+.traffic-pill{background:#173052;border-radius:18px;padding:8px 11px;font-size:11px}
+.navscreen{display:none;position:relative;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 5px 20px #1820330b;margin-bottom:14px}
+.navscreen #navmap{height:54vh;min-height:420px}
+.navcard{position:absolute;left:12px;right:12px;bottom:12px;background:#fff;border-radius:20px;padding:13px;box-shadow:0 5px 24px #0003;z-index:500}
+.navcard .big{font-size:18px;font-weight:900}.navcard .small{font-size:12px;color:var(--muted);margin-top:3px}
+.navrow{display:flex;justify-content:space-between;align-items:center;gap:8px}.navrow button{min-height:42px}
+.route-alt{border:1px solid var(--line);border-radius:13px;padding:9px;margin-top:8px;display:flex;justify-content:space-between;font-size:12px}
+.avoid-alert{display:none;background:#fff0f2;color:#9e263b;border-radius:14px;padding:10px;margin-top:8px;font-size:12px;font-weight:700}
+.control-row{display:flex;gap:8px;overflow:auto;padding:8px 0}.control-row button{white-space:nowrap;min-height:42px}
+
+</style>
+</head>
+<body>
+<div id="driveTop" class="drive-top">
+  <div><b id="driveTime">—</b><span id="driveArrival">الوصول —</span></div>
+  <div class="traffic-pill" id="trafficPill">🟢 حركة طبيعية</div>
+</div>
+<header>
+  <div class="brand">
+    <div class="logo">♿</div>
+    <div><h1>MilanoDisabiliNAV</h1><div class="sub">ملاحة مخصصة لحاملي تصريح ذوي الإعاقة</div></div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="status"><div class="dot"></div><div><strong id="statusTitle">جاهز للملاحة</strong><span id="statusText">حدد موقعك ثم اكتب وجهتك.</span></div></div>
+  </div>
+
+  <div class="card">
+    <label for="destination">📍 إلى أين تريد الذهاب؟</label>
+    <div class="inputrow">
+      <input id="destination" value="Duomo, Milano" placeholder="مثال: Duomo, Milano">
+      <button class="secondary" id="locateBtn">موقعي</button>
+    </div>
+    <div class="actions">
+      <button class="primary" id="routeBtn">🧭 احسب الطريق</button>
+      <button class="secondary" id="clearBtn">مسح الطريق</button>
+    </div>
+    <div id="message"></div>
+    <div class="summary" id="summary">
+      <div class="metric"><b id="distance">—</b><span>المسافة</span></div>
+      <div class="metric"><b id="duration">—</b><span>الوقت المتوقع</span></div>
+      <div class="metric"><b id="eta">—</b><span>الوصول المتوقع</span></div>
+    </div>
+    <div id="navInfo" class="navinfo" style="display:none">
+      <div><b id="nextInstruction">—</b><span id="nextDistance">—</span></div>
+      <button class="green" id="startNavBtn">▶️ ابدأ الملاحة</button>
+    </div>
+    <div id="trafficNote" class="note" style="display:none"></div>
+  </div>
+
+  <div class="navscreen" id="navscreen">
+    <div id="navmap"></div>
+    <div class="navcard">
+      <div class="navrow">
+        <div>
+          <div class="big" id="navTurn">جاهز للملاحة</div>
+          <div class="small" id="navTurnDist">—</div>
+        </div>
+        <button class="secondary" id="recenterBtn">📍 مركزي</button>
+      </div>
+      <div class="avoid-alert" id="avoidAlert"></div>
+      <div class="control-row">
+        <button class="secondary" id="voiceBtn">🔊 الصوت</button>
+        <button class="secondary" id="rerouteBtn">🔄 إعادة المسار</button>
+        <button class="secondary" id="stopNavBtn">⏹️ إيقاف</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mapwrap"><div id="map"></div></div>
+
+  <div class="card">
+    <div class="section-title"><h2>🚧 قيود يجب الانتباه إليها</h2><span class="badge">Milano</span></div>
+    <div class="restrictions">
+      <div class="restriction"><b>Via Teuliè</b><small>القيد خاص باتجاه periferia في المسار المحجوز للترام — ليس الشارع كله.</small></div>
+      <div class="restriction"><b>Via Broletto</b><small>باتجاه Piazza Cordusio.</small></div>
+      <div class="restriction"><b>Piazza Lega Lombarda</b><small>باتجاه Via Bramante.</small></div>
+      <div class="restriction"><b>Via Ripamonti</b><small>المقطع بين Viale Isonzo و Via Soave.</small></div>
+      <div class="restriction"><b>Piazzale Arduino</b><small>منطقة ذات قيد على المركبات المصرح لها حسب اللوحات.</small></div>
+      <div class="restriction"><b>Via Sammartini</b><small>انتبه للجزء المخصص حسب الإشارات.</small></div>
+      <div class="restriction"><b>Piazza Luigi di Savoia</b><small>المسار المحجوز حصريًا للترام والشرطة والطوارئ حسب اللوحات.</small></div>
+    </div>
+    <p class="note">⚠️ هذا التطبيق مساعد للملاحة. اتبع دائمًا الإشارات المرورية في المكان. القيود هنا مبنية على المعلومات الرسمية المتاحة، ولا ينبغي اعتبار التطبيق بديلاً عن اللوحات المرورية.</p>
+  </div>
+  <footer>MilanoDisabiliNAV • إصدار احترافي تجريبي</footer>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map',{zoomControl:true}).setView([45.4642,9.19],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+const navMap=L.map('navmap',{zoomControl:false,attributionControl:false}).setView([45.4642,9.19],14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(navMap);
+
+let userMarker=null,destMarker=null,routeLine=null,userPos=null,currentRoute=null;
+let routeSteps=[],watchId=null,lastRouteTime=0,voiceOn=true,navMapMarker=null;
+
+const $=id=>document.getElementById(id);
+function msg(text,type='info'){const el=$('message');el.textContent=text;el.className=type;el.style.display='block'}
+function status(title,text){$('statusTitle').textContent=title;$('statusText').textContent=text}
+function markerIcon(emoji){return L.divIcon({className:'',html:`<div style="background:#0b1228;color:white;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:3px solid white;box-shadow:0 3px 12px #0004;font-size:18px">${emoji}</div>`,iconSize:[36,36],iconAnchor:[18,18]})}
+function setLocation(lat,lon){
+  userPos={lat,lon};
+  if(userMarker) userMarker.setLatLng([lat,lon]); else userMarker=L.marker([lat,lon],{icon:markerIcon('📍')}).addTo(map).bindPopup('موقعك الحالي');
+  if(navMapMarker) navMapMarker.setLatLng([lat,lon]); else navMapMarker=L.marker([lat,lon],{icon:markerIcon('🚗')}).addTo(navMap);
+}
+$('locateBtn').onclick=()=>{
+  if(!navigator.geolocation){msg('المتصفح لا يدعم تحديد الموقع.','err');return}
+  msg('جاري تحديد موقعك…','info');status('تحديد الموقع','اسمح للمتصفح بالوصول إلى موقعك.');
+  navigator.geolocation.getCurrentPosition(p=>{
+    setLocation(p.coords.latitude,p.coords.longitude);map.setView([p.coords.latitude,p.coords.longitude],14);
+    navMap.setView([p.coords.latitude,p.coords.longitude],15);
+    status('تم تحديد موقعك','يمكنك الآن اختيار الوجهة وحساب الطريق.');msg('تم تحديد موقعك بنجاح.','ok');
+  },()=>{msg('لم يتم الحصول على الموقع. تأكد من السماح بالموقع في Chrome.','err')},
+  {enableHighAccuracy:true,timeout:12000,maximumAge:10000});
+};
+async function geocode(q){
+  const r=await fetch('https://photon.komoot.io/api/?limit=1&q='+encodeURIComponent(q));
+  if(!r.ok)throw new Error('geocode');const j=await r.json();
+  if(!j.features?.length)throw new Error('notfound');const c=j.features[0].geometry.coordinates;
+  return {lat:c[1],lon:c[0],name:j.features[0].properties?.name||q};
+}
+const avoidedRoads=['Via Teuliè','Via Teulie','Via Broletto','Piazza Lega Lombarda','Via Ripamonti','Piazzale Arduino','Via Sammartini','Piazza Luigi di Savoia'];
+function norm(s){return(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\u0600-\u06ff ]/g,' ').replace(/\s+/g,' ').trim()}
+function hit(step){const n=norm(step?.name);return avoidedRoads.some(x=>n.includes(norm(x)))}
+function duration(s){const m=Math.max(0,Math.round(s/60));return m<60?m+' د':Math.floor(m/60)+'س '+(m%60)+'د'}
+function dist(m){return m<1000?Math.round(m)+' م':(m/1000).toFixed(1)+' كم'}
+function eta(s){const d=new Date(Date.now()+s*1000);return d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}
+function speak(t){if(!voiceOn||!('speechSynthesis'in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='ar-SA';u.rate=1;speechSynthesis.speak(u)}
+function setDriveSummary(rt){
+  $('driveTop').style.display='flex';$('driveTime').textContent=duration(rt.duration);$('driveArrival').textContent='الوصول '+eta(rt.duration);
+  $('distance').textContent=(rt.distance/1000).toFixed(1)+' km';$('duration').textContent=duration(rt.duration);$('eta').textContent=eta(rt.duration);
+  $('summary').style.display='grid';
+}
+function getGoogleKey(){return localStorage.getItem('milano_google_routes_key')||''}
+$('googleKey').value=getGoogleKey();
+$('saveKeyBtn').onclick=()=>{const k=$('googleKey').value.trim();if(k){localStorage.setItem('milano_google_routes_key',k);msg('تم حفظ المفتاح على هذا الجهاز فقط.','ok')}else msg('أدخل المفتاح أولًا.','err')};
+$('clearKeyBtn').onclick=()=>{localStorage.removeItem('milano_google_routes_key');$('googleKey').value='';msg('تم مسح المفتاح.','ok')};
+async function getGoogleRoute(from,to){
+  const key=getGoogleKey();if(!key)return null;
+  const body={origin:{location:{latLng:{latitude:from.lat,longitude:from.lon}}},
+    destination:{location:{latLng:{latitude:to.lat,longitude:to.lon}}},
+    travelMode:'DRIVE',routingPreference:'TRAFFIC_AWARE_OPTIMAL',trafficModel:'BEST_GUESS',
+    computeAlternativeRoutes:true,languageCode:'ar',units:'METRIC'};
+  const r=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+    method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':key,
+    'X-Goog-FieldMask':'routes.duration,routes.staticDuration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters'},
+    body:JSON.stringify(body)});
+  if(!r.ok)throw Error('google-route');const j=await r.json();
+  if(!j.routes?.length)throw Error('noroute');return j.routes;
+}
+async function getOSRMRoutes(from,to){
+  const url=`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+  const r=await fetch(url);if(!r.ok)throw Error('route');const j=await r.json();
+  if(j.code!=='Ok'||!j.routes?.length)throw Error('noroute');return j.routes;
+}
+function decodePolyline(encoded){
+  let i=0,lat=0,lng=0,out=[];
+  while(i<encoded.length){let b,shift=0,result=0;
+    do{b=encoded.charCodeAt(i++)-63;result|=(b&31)<<shift;shift+=5}while(b>=32);
+    lat+=((result&1)?~(result>>1):(result>>1));shift=0;result=0;
+    do{b=encoded.charCodeAt(i++)-63;result|=(b&31)<<shift;shift+=5}while(b>=32);
+    lng+=((result&1)?~(result>>1):(result>>1));out.push([lat/1e5,lng/1e5]);}
+  return out;
+}
+function googleToLocalRoutes(routes){
+  return routes.map(r=>{
+    const seconds=parseFloat(String(r.duration||'0').replace('s',''))||0;
+    const staticSeconds=parseFloat(String(r.staticDuration||'0').replace('s',''))||seconds;
+    const steps=(r.legs||[]).flatMap(l=>(l.steps||[]).map(s=>({name:s.navigationInstruction?.instructions||'',distance:s.distanceMeters||0})));
+    return {distance:r.distanceMeters||0,duration:seconds,staticDuration:staticSeconds,
+      geometry:{type:'LineString',coordinates:decodePolyline(r.polyline?.encodedPolyline||'').map(p=>[p[1],p[0]])},legs:[{steps}]};
+  });
+}
+async function getRoutesSmart(from,to){
+  if(getGoogleKey()){try{return {routes:googleToLocalRoutes(await getGoogleRoute(from,to)),live:true}}catch(e){msg('تعذر الحصول على Traffic من Google؛ سيتم استخدام التوجيه الاحتياطي.','info')}}
+  return {routes:await getOSRMRoutes(from,to),live:false};
+}
+function pick(routes){
+  const safe=routes.filter(r=>!(r.legs||[]).some(l=>(l.steps||[]).some(hit)));
+  return safe[0]||routes[0];
+}
+async function calculate(){
+  if(!userPos){msg('اضغط «موقعي» أولًا.','err');return}
+  const q=$('destination').value.trim();if(!q){msg('اكتب وجهتك.','err');return}
+  msg('جاري حساب أفضل طريق…','info');status('حساب المسار','جاري البحث عن الطريق والازدحام.');
+  const d=await geocode(q+', Milano, Italy');
+  if(destMarker)destMarker.setLatLng([d.lat,d.lon]);else destMarker=L.marker([d.lat,d.lon],{icon:markerIcon('🏁')}).addTo(map);
+  const result=await getRoutesSmart(userPos,d),routes=result.routes,rt=pick(routes);
+  render(rt,routes);
+  $('trafficPill').textContent=result.live?'🟢 Traffic حي':'🔵 Traffic غير متصل';
+  $('trafficNote').style.display='block';
+  if(result.live){
+    const extra=Math.max(0,Math.round((rt.duration-(rt.staticDuration||rt.duration))/60));
+    $('trafficNote').textContent=extra>0?`🚦 زحمة حية: ${duration(rt.duration)} — حوالي ${extra} د إضافية بسبب المرور.`:`🚦 Traffic حي: ${duration(rt.duration)} — لا يوجد تأخير كبير.`;
+  }else $('trafficNote').textContent='ℹ️ أضف مفتاح Google Maps Platform لتفعيل الازدحام الحي ووقت الوصول المتغير.';
+  msg(result.live?'تم حساب المسار باستخدام Traffic حي.':'تم حساب المسار بدون Traffic حي.','ok');
+  status('المسار جاهز',result.live?'تم احتساب حركة المرور الحالية.':'تم حساب الطريق؛ Traffic الحي غير مفعّل.');
+  lastRouteTime=Date.now();
+}
+$('routeBtn').onclick=async()=>{try{await calculate()}catch(e){msg(e.message==='notfound'?'لم أجد الوجهة.':'تعذر حساب الطريق. تحقق من الإنترنت.','err')}};
+$('startNavBtn').onclick=startNavigation;
+function startNavigation(){
+  if(!currentRoute){msg('احسب الطريق أولًا.','err');return}
+  $('startNavBtn').textContent='⏹️ إيقاف الملاحة';$('startNavBtn').onclick=stopNavigation;
+  status('الملاحة بدأت','متابعة الموقع وإعادة الحساب عند الحاجة.');speak('بدأت الملاحة');
+  if(navigator.geolocation)watchId=navigator.geolocation.watchPosition(async p=>{
+    setLocation(p.coords.latitude,p.coords.longitude);
+    navMap.setView([p.coords.latitude,p.coords.longitude],16);
+    if(Date.now()-lastRouteTime>30000){try{await calculate()}catch(e){}}
+  },()=>msg('تعذر تحديث الموقع أثناء الملاحة.','err'),{enableHighAccuracy:true,maximumAge:5000,timeout:10000});
+}
+function stopNavigation(){
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  $('startNavBtn').textContent='▶️ ابدأ الملاحة';$('startNavBtn').onclick=startNavigation;
+  status('المسار جاهز','تم إيقاف الملاحة.');speechSynthesis?.cancel();
+}
+$('stopNavBtn').onclick=stopNavigation;
+$('rerouteBtn').onclick=async()=>{try{await calculate()}catch(e){msg('تعذر إعادة حساب الطريق.','err')}};
+$('recenterBtn').onclick=()=>{if(userPos)navMap.setView([userPos.lat,userPos.lon],16)};
+$('voiceBtn').onclick=()=>{voiceOn=!voiceOn;$('voiceBtn').textContent=voiceOn?'🔊 الصوت':'🔇 الصوت';if(voiceOn)speak('تم تشغيل الصوت')};
+
+$('clearBtn').onclick=()=>{
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  if(routeLine){routeLine.remove();routeLine=null}if(destMarker){destMarker.remove();destMarker=null}
+  currentRoute=null;routeSteps=[];$('summary').style.display='none';$('navscreen').style.display='none';
+  $('driveTop').style.display='none';$('trafficNote').style.display='none';$('message').style.display='none';
+  status('جاهز للملاحة','حدد موقعك ثم اكتب وجهتك.');
+};
+</script>
+</body>
+</html>
