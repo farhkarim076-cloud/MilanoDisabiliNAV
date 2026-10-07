@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Milano Disabili NAV v2</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#0f172a;font-family:system-ui,-apple-system,"Segoe UI",Arial}
+header{background:#0f172a;color:#fff;padding:18px 16px;text-align:center}h1{margin:0;font-size:22px}.sub{opacity:.8;font-size:12px;margin-top:4px}
+main{max-width:720px;margin:auto;padding:12px}.card{background:#fff;border-radius:18px;padding:14px;margin:10px 0;box-shadow:0 3px 14px #0001}
+label{font-weight:800;font-size:13px;display:block;margin:8px 0 5px}input{width:100%;padding:14px;border:1px solid #cbd5e1;border-radius:13px;font-size:16px}
+button{border:0;border-radius:13px;padding:13px;font-size:15px;font-weight:800;width:100%;margin-top:8px;background:#0f172a;color:#fff}
+button.secondary{background:#e2e8f0;color:#0f172a}.big{font-size:17px;padding:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#map{height:52vh;min-height:330px;border-radius:15px;overflow:hidden}
+.status{padding:10px;border-radius:12px;background:#eff6ff;margin-top:9px;font-size:13px}.bad{background:#fef2f2}.good{background:#ecfdf5}
+.warning{font-size:13px;background:#fff7ed;border:1px solid #fed7aa;border-radius:13px;padding:11px}
+.pill{display:block;padding:8px 10px;background:#f8fafc;border-radius:10px;margin:5px 0;font-size:12px}
+#nav{display:none}
+</style>
+</head>
+<body>
+<header><h1>🚗 Milano Disabili NAV</h1><div class="sub">الإصدار 2 — ملاحة مخصصة للتصريح</div></header>
+<main>
+<div class="card">
+  <button class="big" onclick="start()">📍 ابدأ الملاحة</button>
+  <div id="status" class="status">اضغط «ابدأ الملاحة» للسماح باستخدام موقع الهاتف.</div>
+</div>
+
+<div id="nav" class="card">
+  <label>إلى أين تريد الذهاب؟</label>
+  <input id="dest" placeholder="مثال: Duomo Milano">
+  <div class="row">
+    <button onclick="calc()">🧭 احسب الطريق</button>
+    <button class="secondary" onclick="centerMe()">📍 موقعي</button>
+  </div>
+</div>
+
+<div class="card"><div id="map"></div></div>
+
+<div class="card">
+  <div class="warning"><b>⚠️ مهم:</b> التطبيق يساعدك على التخطيط، لكن الإشارات المؤقتة في الشارع لها الأولوية.</div>
+  <h3 style="margin-bottom:6px">القيود المعروفة</h3>
+  <div class="pill">Via Teuliè: المنع فقط باتجاه periferia داخل حارة الترام.</div>
+  <div class="pill">Via Broletto: اتجاه Piazza Cordusio.</div>
+  <div class="pill">Piazza Lega Lombarda: اتجاه Via Bramante.</div>
+  <div class="pill">Via Ripamonti: المقطع بين Viale Isonzo وVia Soave.</div>
+  <div class="pill">Piazzale Arduino.</div>
+  <div class="pill">Via Sammartini.</div>
+  <div class="pill">Piazza Luigi di Savoia: المدخل المحدد أمام Viale Andrea Doria.</div>
+</div>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map').setView([45.4642,9.1900],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+let pos=null, marker=null, destMarker=null, line=null;
+
+const restricted=[
+["Via Teuliè",45.45102,9.18635,180,"اتجاه periferia في حارة الترام فقط"],
+["Via Broletto",45.4660,9.1862,170,"اتجاه Piazza Cordusio"],
+["Piazza Lega Lombarda",45.4779,9.1803,170,"اتجاه Via Bramante"],
+["Via Ripamonti",45.4416,9.1982,260,"المقطع المحدد فقط"],
+["Piazzale Arduino",45.4788,9.1477,170,"منطقة مقيدة"],
+["Via Sammartini",45.4917,9.2074,180,"منطقة مقيدة"],
+["Piazza Luigi di Savoia",45.4857,9.2030,150,"المدخل المحدد فقط"]
+];
+restricted.forEach(x=>L.circle([x[1],x[2]],{radius:x[3],color:"#dc2626",fillOpacity:.08}).addTo(map).bindPopup("<b>"+x[0]+"</b><br>"+x[4]));
+
+function status(t,c=""){let e=document.getElementById("status");e.textContent=t;e.className="status "+c}
+function start(){
+ if(!navigator.geolocation){status("الهاتف لا يدعم تحديد الموقع.","bad");return}
+ status("أطلب إذن الموقع…");
+ navigator.geolocation.getCurrentPosition(p=>{
+  pos={lat:p.coords.latitude,lon:p.coords.longitude};
+  document.getElementById("nav").style.display="block";
+  showMe();status("تم تحديد موقعك. اكتب الوجهة ثم اضغط «احسب الطريق».","good");
+ },err=>{
+  status("لم يُسمح بالموقع. افتح إعدادات Chrome ← أذونات الموقع ← اسمح للموقع، ثم أعد فتح التطبيق.","bad");
+ },{enableHighAccuracy:true,timeout:15000,maximumAge:5000});
+}
+function showMe(){
+ if(marker)map.removeLayer(marker);
+ marker=L.marker([pos.lat,pos.lon]).addTo(map).bindPopup("📍 موقعك الحالي").openPopup();
+ map.setView([pos.lat,pos.lon],14);
+}
+function centerMe(){if(pos){showMe()}else start()}
+async function geocode(q){
+ const u="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q="+encodeURIComponent(q+", Milano");
+ const r=await fetch(u,{headers:{"Accept-Language":"it"}});const a=await r.json();
+ if(!a.length)throw Error("لم أجد الوجهة.");return {lat:+a[0].lat,lon:+a[0].lon,name:a[0].display_name};
+}
+async function calc(){
+ if(!pos){start();return}
+ const q=document.getElementById("dest").value.trim();if(!q){status("اكتب الوجهة أولاً.","bad");return}
+ try{
+  status("جاري حساب المسار…");
+  const d=await geocode(q);
+  if(destMarker)map.removeLayer(destMarker);destMarker=L.marker([d.lat,d.lon]).addTo(map).bindPopup(d.name).openPopup();
+  const payload={locations:[pos,{lat:d.lat,lon:d.lon}],costing:"auto",units:"kilometers",exclude_locations:restricted.map(x=>({lat:x[1],lon:x[2]}))};
+  const r=await fetch("https://valhalla1.openstreetmap.de/route",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  if(!r.ok)throw Error("خدمة حساب الطريق غير متاحة حالياً.");
+  const data=await r.json(),shape=data.trip.legs[0].shape,coords=decode(shape);
+  if(line)map.removeLayer(line);line=L.polyline(coords,{weight:7}).addTo(map);map.fitBounds(line.getBounds(),{padding:[20,20]});
+  status("تم إنشاء مسار محافظ يتجنب نقاط القيود المعروفة. راقب الإشارات في الطريق.","good");
+ }catch(e){status(e.message,"bad")}
+}
+function decode(s){
+ let i=0,lat=0,lon=0,o=[];
+ while(i<s.length){
+  let b,sh=0,res=0;do{b=s.charCodeAt(i++)-63;res|=(b&31)<<sh;sh+=5}while(b>=32);lat+=(res&1)?~(res>>1):res>>1;
+  sh=0;res=0;do{b=s.charCodeAt(i++)-63;res|=(b&31)<<sh;sh+=5}while(b>=32);lon+=(res&1)?~(res>>1):res>>1;o.push([lat/1e6,lon/1e6]);
+ }return o;
+}
+</script>
+</body></html>
